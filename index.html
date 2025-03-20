@@ -2,72 +2,65 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>井字遊戲</title>
+  <title>井字遊戲 (貓咪版)</title>
   <style>
-    /* 設定背景使用淡紅色 */
+    /* 淡紅色背景 */
     body {
       margin: 0;
       height: 100vh;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       background-color: #ffcccc;
     }
-    /* 遊戲區塊設定為 3x3 的格子 */
+    /* 顯示訊息的區塊 */
+    #message {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #333;
+      font-weight: bold;
+    }
+    /* 棋盤樣式：3x3 格子 */
     #game {
       display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-template-rows: repeat(3, 100px);
-      gap: 5px;
-      padding: 5px;
-      background-color: #444;
-      border: 3px solid #222;
+      grid-template-columns: repeat(3, 120px);
+      grid-template-rows: repeat(3, 120px);
+      width: 360px;
+      height: 360px;
+      background-color: #fefefe;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
-    /* 每個格子設定 */
+    /* 每個格子以內建 2px 邊框，再移除外圍邊線，只保留中間的分隔線 */
     .cell {
-      width: 100px;
-      height: 100px;
-      background-color: #fff;
-      cursor: pointer;
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 0;
       position: relative;
-    }
-    /* 畫圈的樣式 */
-    .circle {
-      width: 60px;
-      height: 60px;
-      border: 5px solid #00f;
-      border-radius: 50%;
+      border: 2px solid #333;
       box-sizing: border-box;
     }
-    /* 畫叉的樣式，利用兩條旋轉的線條 */
-    .cross {
-      position: relative;
-      width: 60px;
-      height: 60px;
-    }
-    .cross::before,
-    .cross::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 0;
-      width: 100%;
-      height: 5px;
-      background-color: #f00;
-    }
-    .cross::before {
-      transform: translateY(-50%) rotate(45deg);
-    }
-    .cross::after {
-      transform: translateY(-50%) rotate(-45deg);
+    /* 移除外側的邊框 */
+    .cell:nth-child(1) { border-top: none; border-left: none; }
+    .cell:nth-child(2) { border-top: none; }
+    .cell:nth-child(3) { border-top: none; border-right: none; }
+    .cell:nth-child(4) { border-left: none; }
+    .cell:nth-child(6) { border-right: none; }
+    .cell:nth-child(7) { border-bottom: none; border-left: none; }
+    .cell:nth-child(8) { border-bottom: none; }
+    .cell:nth-child(9) { border-bottom: none; border-right: none; }
+    
+    /* 讓放進來的圖片自動縮放，不會超過格子大小 */
+    .cell img {
+      max-width: 90px;   /* 可自行調整貓咪圖片大小 */
+      max-height: 90px;
     }
   </style>
 </head>
 <body>
+  <!-- 顯示遊戲狀態的文字，例如「輪到誰」「誰獲勝」等 -->
+  <div id="message">開始遊戲，輪到「橘貓」</div>
+
   <div id="game">
     <div class="cell" data-index="0"></div>
     <div class="cell" data-index="1"></div>
@@ -81,12 +74,18 @@
   </div>
 
   <script>
-    // 初始玩家為圈
-    let currentPlayer = 'circle';
-    // 用陣列儲存每格狀態，初始值皆為空
+    // 使用兩張貓咪圖片的連結 (請確保圖片連結有效)
+    const cat1 = 'https://i.postimg.cc/59Xtr6xK/2025-1.jpg';  // 橘貓 (原本的圈)
+    const cat2 = 'https://i.postimg.cc/0Qf7HrPy/2025-3.jpg';  // 灰貓 (原本的叉)
+
+    // 玩家狀態：一開始由橘貓先下
+    let currentPlayer = 'cat1';
+    // 棋盤陣列，用來儲存每格的狀態
     const board = Array(9).fill('');
+    // 取得網頁元素
     const cells = document.querySelectorAll('.cell');
-    // 定義所有可能的勝利組合
+    const messageDiv = document.getElementById('message');
+    // 所有可能的勝利組合
     const winningCombinations = [
       [0, 1, 2],
       [3, 4, 5],
@@ -98,11 +97,11 @@
       [2, 4, 6]
     ];
 
-    // 檢查某玩家是否獲勝
+    // 檢查玩家是否獲勝
     function checkWin(player) {
-      return winningCombinations.some(combination => {
-        return combination.every(index => board[index] === player);
-      });
+      return winningCombinations.some(combination =>
+        combination.every(index => board[index] === player)
+      );
     }
 
     // 檢查是否平手
@@ -110,44 +109,51 @@
       return board.every(cell => cell !== '');
     }
 
-    // 重置遊戲
+    // 重置棋盤
     function resetBoard() {
       board.fill('');
       cells.forEach(cell => {
         cell.innerHTML = '';
       });
-      currentPlayer = 'circle';
+      currentPlayer = 'cat1';  // 重置為橘貓先下
+      messageDiv.textContent = '開始遊戲，輪到「橘貓」';
     }
 
-    // 為每個格子增加點擊事件
+    // 點擊事件
     cells.forEach(cell => {
       cell.addEventListener('click', () => {
         const index = cell.getAttribute('data-index');
-        if (board[index] !== '') return;  // 已被點選則跳過
+        // 若該格已被下過，則不動作
+        if (board[index] !== '') return;
 
-        // 根據目前玩家放置圖案
+        // 在程式邏輯中，cat1 = 橘貓, cat2 = 灰貓
         board[index] = currentPlayer;
-        if (currentPlayer === 'circle') {
-          cell.innerHTML = '<div class="circle"></div>';
+        if (currentPlayer === 'cat1') {
+          // 放橘貓圖片
+          cell.innerHTML = `<img src="${cat1}" alt="橘貓">`;
         } else {
-          cell.innerHTML = '<div class="cross"></div>';
+          // 放灰貓圖片
+          cell.innerHTML = `<img src="${cat2}" alt="灰貓">`;
         }
 
-        // 檢查是否獲勝
+        // 檢查是否有人獲勝
         if (checkWin(currentPlayer)) {
-          alert(currentPlayer === 'circle' ? '圈圈獲勝！' : '叉叉獲勝！');
-          resetBoard();
+          messageDiv.textContent = (currentPlayer === 'cat1') ? '橘貓獲勝！' : '灰貓獲勝！';
+          // 2 秒後自動重置
+          setTimeout(resetBoard, 2000);
           return;
         }
+
         // 檢查是否平手
         if (checkTie()) {
-          alert('平手！');
-          resetBoard();
+          messageDiv.textContent = '平手！';
+          setTimeout(resetBoard, 2000);
           return;
         }
 
         // 換下一位玩家
-        currentPlayer = currentPlayer === 'circle' ? 'cross' : 'circle';
+        currentPlayer = (currentPlayer === 'cat1') ? 'cat2' : 'cat1';
+        messageDiv.textContent = (currentPlayer === 'cat1') ? '輪到「橘貓」' : '輪到「灰貓」';
       });
     });
   </script>
